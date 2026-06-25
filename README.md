@@ -17,7 +17,14 @@
 
 ## 실행
 
-순수 정적 파일이라 어떤 정적 서버로든 열 수 있습니다.
+### 방법 1 — 단일 파일 (가장 간단)
+
+**[`pde-playground.html`](pde-playground.html)** 한 파일만 받아서 브라우저로 **더블클릭/열기** 하면 끝입니다.
+모든 CSS·JS 가 인라인되어 있어 서버 없이 `file://` 로 바로 동작합니다.
+
+### 방법 2 — 모듈 버전 (개발용)
+
+`index.html` + `js/` + `css/` 구조는 ES 모듈을 쓰므로 정적 서버가 필요합니다.
 
 ```bash
 # 저장소 루트에서
@@ -25,7 +32,15 @@ python3 -m http.server 8000
 # 브라우저에서 http://localhost:8000 접속
 ```
 
-> ES 모듈을 쓰기 때문에 `file://` 로 직접 열면 동작하지 않습니다. 반드시 HTTP 서버로 여세요.
+> 모듈 버전(`index.html`)은 `file://` 로 직접 열면 동작하지 않습니다. 서버 없이 쓰려면 `pde-playground.html` 을 쓰세요.
+
+### 단일 파일 다시 만들기
+
+`js/`·`css/` 를 수정한 뒤 단일 파일을 갱신하려면:
+
+```bash
+node build.mjs   # → pde-playground.html 재생성
+```
 
 ## 사용법
 

@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PDE Playground — 실시간 편미분방정식 시각화</title>
+  <style>
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #1c2330;
+  --border: #2a3340;
+  --text: #e6edf3;
+  --muted: #8b98a8;
+  --accent: #58a6ff;
+  --accent-2: #3fb950;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+#sidebar {
+  width: 320px;
+  min-width: 320px;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.field-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+select, button, input[type="range"] {
+  font-family: inherit;
+}
+
+select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 8px;
+  font-size: 13px;
+}
+
+.desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 10px 0 6px;
+}
+
+.formula {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-family: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+  font-size: 13px;
+  color: var(--accent);
+  text-align: center;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 10px;
+}
+.control-row:first-child { margin-top: 0; }
+.control-row span { color: var(--muted); flex: 0 0 auto; }
+.control-row.slider { flex-wrap: wrap; }
+.control-row.slider span { flex: 1 1 100%; margin-bottom: 4px; }
+.control-row input[type="range"] { flex: 1 1 auto; }
+.control-row output {
+  flex: 0 0 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.control-row select { width: auto; flex: 0 0 auto; }
+
+#params .param { margin-bottom: 12px; }
+#params .param:last-child { margin-bottom: 0; }
+#params .param-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+#params .param-head .name { color: var(--text); }
+#params .param-head .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+#params input[type="range"] { width: 100%; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 15px; height: 15px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.buttons { display: flex; gap: 8px; }
+.buttons button {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.buttons button:hover { border-color: var(--accent); }
+.buttons button:active { background: var(--panel-2); }
+
+footer { margin-top: auto; }
+.hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.hint strong { color: var(--text); }
+.status { font-size: 11px; color: var(--accent-2); font-variant-numeric: tabular-nums; }
+
+#canvas-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #06080c;
+  min-width: 0;
+}
+#gl {
+  display: block;
+  background: #000;
+  touch-action: none;
+  cursor: crosshair;
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: auto;
+}
+
+.overlay-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+  background: rgba(6, 8, 12, 0.92);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.overlay-msg.hidden { display: none; }
+
+@media (max-width: 720px) {
+  #app { flex-direction: column-reverse; }
+  #sidebar {
+    width: 100%;
+    min-width: 0;
+    height: 45%;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+  #canvas-wrap { height: 55%; }
+}
+
+</style>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <header>
+        <h1>PDE Playground</h1>
+        <p class="subtitle">GPU 기반 실시간 편미분방정식 솔버</p>
+      </header>
+
+      <section class="panel">
+        <label class="field-label">방정식</label>
+        <select id="equation-select"></select>
+        <p id="equation-desc" class="desc"></p>
+        <div id="equation-formula" class="formula"></div>
+      </section>
+
+      <section class="panel" id="params-panel">
+        <label class="field-label">파라미터</label>
+        <div id="params"></div>
+      </section>
+
+      <section class="panel">
+        <label class="field-label">시각화</label>
+        <div class="control-row">
+          <span>컬러맵</span>
+          <select id="cmap-select">
+            <option value="0">Coolwarm</option>
+            <option value="1">Fire</option>
+            <option value="2">Spectral</option>
+            <option value="3">Ocean</option>
+            <option value="4">Grayscale</option>
+          </select>
+        </div>
+        <div class="control-row slider">
+          <span>대비 (gain)</span>
+          <input type="range" id="gain" min="0.1" max="6" step="0.05" value="1.4" />
+          <output id="gain-val"></output>
+        </div>
+        <div class="control-row">
+          <span>해상도</span>
+          <select id="grid-select">
+            <option value="128">128 × 128</option>
+            <option value="256" selected>256 × 256</option>
+            <option value="512">512 × 512</option>
+          </select>
+        </div>
+        <div class="control-row slider">
+          <span>속도 (steps/frame)</span>
+          <input type="range" id="substeps" min="1" max="20" step="1" value="4" />
+          <output id="substeps-val"></output>
+        </div>
+        <div class="control-row slider">
+          <span>붓 크기</span>
+          <input type="range" id="brush" min="0.005" max="0.12" step="0.005" value="0.03" />
+          <output id="brush-val"></output>
+        </div>
+      </section>
+
+      <section class="panel buttons">
+        <button id="btn-play">⏸ 일시정지</button>
+        <button id="btn-drop">💧 중앙 자극</button>
+        <button id="btn-clear">🧹 초기화</button>
+      </section>
+
+      <footer>
+        <p class="hint">캔버스를 <strong>클릭/드래그</strong>하면 그 자리에 교란을 줍니다. 모바일에서는 터치하세요.</p>
+        <p class="status" id="status"></p>
+      </footer>
+    </aside>
+
+    <main id="canvas-wrap">
+      <canvas id="gl"></canvas>
+      <div id="overlay-msg" class="overlay-msg hidden"></div>
+    </main>
+  </div>
+
+  <script>
+// Equation definitions.
+//
+// Each equation provides a GLSL "body" that is injected into the update shader
+// template (see solver.js). The simulation works in *grid units* (dx = 1), so
+// the discrete Laplacian is just the 5-point stencil with no 1/dx^2 factor.
+// This keeps the explicit time-stepping stable with friendly dt values and
+// makes the dynamics visually lively, exactly like browser PDE demos.
+//
+// Available inside the GLSL body:
+//   u, v            : current field value and its time-derivative (channels x,y)
+//   lap             : discrete Laplacian of u  (sum of 4 neighbours - 4u)
+//   Uo(vec2 off)    : sample u at an integer texel offset
+//   Vo(vec2 off)    : sample v at an integer texel offset
+//   u_dt, u_time    : timestep and accumulated simulation time
+//   u_p0..u_p3      : the equation's parameters, in the order listed in `params`
+//   v_uv            : normalized coordinate of the current cell, in [0,1]^2
+// The body must assign `newU` and `newV` (the next state).
+
+const EQUATIONS = [
+  {
+    id: "heat",
+    name: "열 방정식 (Heat)",
+    formula: "∂u/∂t = D ∇²u",
+    desc:
+      "확산 방정식. 임의의 분포가 시간이 지나며 부드럽게 퍼지고 평탄해집니다. " +
+      "캔버스를 클릭해 열을 주입해 보세요.",
+    dt: 0.4,
+    substeps: 6,
+    gain: 1.4,
+    brushAmp: 1.0,
+    params: [
+      { key: "p0", name: "확산계수 D", min: 0.02, max: 0.25, step: 0.005, value: 0.18 },
+    ],
+    body: /* glsl */ `
+      newU = u + u_dt * u_p0 * lap;
+      newV = 0.0;
+    `,
+  },
+
+  {
+    id: "wave",
+    name: "파동 방정식 (Wave)",
+    formula: "∂²u/∂t² = c² ∇²u − γ ∂u/∂t",
+    desc:
+      "2차 시간 미분 파동 방정식. 교란이 파동으로 퍼져나가며 경계에서 반사됩니다. " +
+      "감쇠 γ 를 0 으로 두면 거의 영원히 진동합니다.",
+    dt: 0.35,
+    substeps: 4,
+    gain: 1.6,
+    brushAmp: 0.9,
+    params: [
+      { key: "p0", name: "파동속도² c²", min: 0.1, max: 2.5, step: 0.05, value: 1.0 },
+      { key: "p1", name: "감쇠 γ", min: 0.0, max: 0.05, step: 0.001, value: 0.0 },
+    ],
+    body: /* glsl */ `
+      float c2 = u_p0;
+      float damp = u_p1;
+      newV = v + u_dt * (c2 * lap - damp * v);
+      newU = u + u_dt * newV;
+    `,
+  },
+
+  {
+    id: "inhomwave",
+    name: "비균질 파동 (Inhomogeneous Wave)",
+    formula: "∂²u/∂t² = c²(x) ∇²u + f(x,t)",
+    desc:
+      "매질의 파동속도가 공간에 따라 변하고(왼쪽 느림 → 오른쪽 빠름), 왼쪽에 " +
+      "진동하는 강제항 f 가 파동을 계속 만들어냅니다. 굴절·산란을 관찰하세요.",
+    dt: 0.3,
+    substeps: 4,
+    gain: 1.8,
+    brushAmp: 0.8,
+    params: [
+      { key: "p0", name: "속도 스케일", min: 0.2, max: 2.0, step: 0.05, value: 1.0 },
+      { key: "p1", name: "감쇠 γ", min: 0.0, max: 0.03, step: 0.001, value: 0.004 },
+      { key: "p2", name: "강제항 진폭", min: 0.0, max: 1.5, step: 0.05, value: 0.7 },
+      { key: "p3", name: "강제항 주파수", min: 0.0, max: 1.0, step: 0.01, value: 0.28 },
+    ],
+    body: /* glsl */ `
+      // Spatially varying wave speed: smooth gradient across x.
+      float c2 = u_p0 * (0.3 + 1.1 * v_uv.x);
+      float damp = u_p1;
+      // Oscillating point source on the left.
+      vec2 ds = v_uv - vec2(0.18, 0.5);
+      float src = u_p2 * sin(u_p3 * u_time) * exp(-dot(ds, ds) / 0.0009);
+      newV = v + u_dt * (c2 * lap - damp * v + src);
+      newU = u + u_dt * newV;
+    `,
+  },
+
+  {
+    id: "plate",
+    name: "판 방정식 (Plate / Biharmonic)",
+    formula: "∂²u/∂t² = −D ∇⁴u − γ ∂u/∂t",
+    desc:
+      "4차 미분(중조화) 판 진동 방정식. 얇은 금속판처럼 뻣뻣하게 진동하며, " +
+      "파동 방정식과 달리 잔물결이 분산(dispersion)되어 퍼지는 패턴이 나타납니다.",
+    dt: 0.18,
+    substeps: 5,
+    gain: 2.8,
+    brushAmp: 0.7,
+    params: [
+      { key: "p0", name: "강성 D", min: 0.005, max: 0.08, step: 0.001, value: 0.045 },
+      { key: "p1", name: "감쇠 γ", min: 0.0, max: 0.02, step: 0.0005, value: 0.001 },
+    ],
+    body: /* glsl */ `
+      // 13-point biharmonic (∇⁴u) stencil, dx = 1.
+      float biharm =
+          20.0 * u
+        - 8.0 * (Uo(vec2(1.0,0.0)) + Uo(vec2(-1.0,0.0)) + Uo(vec2(0.0,1.0)) + Uo(vec2(0.0,-1.0)))
+        + 2.0 * (Uo(vec2(1.0,1.0)) + Uo(vec2(1.0,-1.0)) + Uo(vec2(-1.0,1.0)) + Uo(vec2(-1.0,-1.0)))
+        + 1.0 * (Uo(vec2(2.0,0.0)) + Uo(vec2(-2.0,0.0)) + Uo(vec2(0.0,2.0)) + Uo(vec2(0.0,-2.0)));
+      float D = u_p0;
+      float damp = u_p1;
+      newV = v - u_dt * (D * biharm + damp * v);
+      newU = u + u_dt * newV;
+    `,
+  },
+];
+
+function getEquation(id) {
+  return EQUATIONS.find((e) => e.id === id) || EQUATIONS[0];
+}
+
+
+// WebGL2 ping-pong PDE solver.
+//
+// State lives in an N x N RGBA32F texture: channel R = u (field), G = v (∂u/∂t).
+// Each solver step runs an update fragment shader that reads neighbouring
+// texels and writes the next state into the other texture (ping-pong). A
+// separate render pass maps the field through a colormap onto the screen.
+
+const VERT_SRC = /* glsl */ `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+  v_uv = a_pos * 0.5 + 0.5;
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+
+function updateFragSrc(body) {
+  return /* glsl */ `#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 outColor;
+
+uniform sampler2D u_state;
+uniform vec2 u_texel;            // 1.0 / N
+uniform float u_dt;
+uniform float u_time;
+uniform float u_p0, u_p1, u_p2, u_p3;
+uniform vec3 u_mouse;            // xy = uv position, z = brush amplitude (0 = inactive)
+uniform float u_brushR;          // brush radius in uv units
+
+float Uo(vec2 off) { return texture(u_state, v_uv + off * u_texel).x; }
+float Vo(vec2 off) { return texture(u_state, v_uv + off * u_texel).y; }
+
+void main() {
+  vec4 st = texture(u_state, v_uv);
+  float u = st.x;
+  float v = st.y;
+  float lap = Uo(vec2(1.0,0.0)) + Uo(vec2(-1.0,0.0))
+            + Uo(vec2(0.0,1.0)) + Uo(vec2(0.0,-1.0)) - 4.0 * u;
+
+  float newU = u;
+  float newV = v;
+
+  ${body}
+
+  // Interactive brush: inject a Gaussian bump while the pointer is down.
+  if (u_mouse.z != 0.0) {
+    vec2 d = v_uv - u_mouse.xy;
+    float fall = exp(-dot(d, d) / (u_brushR * u_brushR));
+    newU += u_mouse.z * fall;
+  }
+
+  outColor = vec4(newU, newV, 0.0, 1.0);
+}`;
+}
+
+const RENDER_FRAG_SRC = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 v_uv;
+out vec4 outColor;
+
+uniform sampler2D u_state;
+uniform float u_gain;
+uniform int u_cmap;
+
+vec3 colormap(int id, float t) {
+  t = clamp(t, 0.0, 1.0);
+  if (id == 0) { // coolwarm
+    vec3 c1 = vec3(0.23, 0.30, 0.75);
+    vec3 c2 = vec3(0.90, 0.90, 0.90);
+    vec3 c3 = vec3(0.71, 0.02, 0.15);
+    return t < 0.5 ? mix(c1, c2, t * 2.0) : mix(c2, c3, (t - 0.5) * 2.0);
+  } else if (id == 1) { // fire
+    vec3 c = mix(vec3(0.0, 0.0, 0.05), vec3(0.7, 0.0, 0.0), smoothstep(0.0, 0.4, t));
+    c = mix(c, vec3(1.0, 0.6, 0.0), smoothstep(0.35, 0.72, t));
+    c = mix(c, vec3(1.0, 1.0, 0.88), smoothstep(0.72, 1.0, t));
+    return c;
+  } else if (id == 2) { // spectral (IQ cosine palette)
+    return vec3(0.5) + vec3(0.5) * cos(6.2831853 * (t + vec3(0.0, 0.33, 0.67)));
+  } else if (id == 3) { // ocean
+    return mix(vec3(0.0, 0.04, 0.18), vec3(0.45, 0.92, 1.0), t);
+  }
+  return vec3(t); // grayscale
+}
+
+void main() {
+  float u = texture(u_state, v_uv).x;
+  float t = 0.5 + 0.5 * tanh(u * u_gain);
+  outColor = vec4(colormap(u_cmap, t), 1.0);
+}`;
+
+function compileShader(gl, type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(sh);
+    gl.deleteShader(sh);
+    throw new Error("Shader compile error:\n" + log + "\n\n" + src);
+  }
+  return sh;
+}
+
+function createProgram(gl, vsSrc, fsSrc) {
+  const vs = compileShader(gl, gl.VERTEX_SHADER, vsSrc);
+  const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSrc);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.bindAttribLocation(prog, 0, "a_pos");
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    throw new Error("Program link error:\n" + gl.getProgramInfoLog(prog));
+  }
+  gl.deleteShader(vs);
+  gl.deleteShader(fs);
+  return prog;
+}
+
+class Solver {
+  constructor(canvas) {
+    const gl = canvas.getContext("webgl2", { antialias: false, depth: false });
+    if (!gl) throw new Error("이 브라우저는 WebGL2 를 지원하지 않습니다.");
+    if (!gl.getExtension("EXT_color_buffer_float")) {
+      throw new Error("이 브라우저는 부동소수점 텍스처 렌더링(EXT_color_buffer_float)을 지원하지 않습니다.");
+    }
+    this.linearOK = !!gl.getExtension("OES_texture_float_linear");
+    this.gl = gl;
+    this.canvas = canvas;
+    this.N = 256;
+    this.time = 0;
+    this.mouse = [0, 0, 0]; // x, y, amp
+    this.brushR = 0.03;
+    this.gain = 1.4;
+    this.cmap = 0;
+    this.params = [0, 0, 0, 0];
+
+    // Fullscreen quad.
+    this.quad = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quad);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+      gl.STATIC_DRAW
+    );
+
+    this.renderProg = createProgram(gl, VERT_SRC, RENDER_FRAG_SRC);
+    this.updateProg = null;
+    this.textures = [];
+    this.fbos = [];
+    this.src = 0;
+
+    this._allocTextures(this.N);
+  }
+
+  _allocTextures(N) {
+    const gl = this.gl;
+    // Clean up previous resources.
+    this.textures.forEach((t) => gl.deleteTexture(t));
+    this.fbos.forEach((f) => gl.deleteFramebuffer(f));
+    this.textures = [];
+    this.fbos = [];
+
+    const filter = this.linearOK ? gl.LINEAR : gl.NEAREST;
+    const zeros = new Float32Array(N * N * 4);
+    for (let i = 0; i < 2; i++) {
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, N, 0, gl.RGBA, gl.FLOAT, zeros);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      const fbo = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+      this.textures.push(tex);
+      this.fbos.push(fbo);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.N = N;
+    this.src = 0;
+  }
+
+  setResolution(N) {
+    if (N === this.N) return;
+    this._allocTextures(N);
+    this.time = 0;
+  }
+
+  setEquation(eq) {
+    const gl = this.gl;
+    if (this.updateProg) gl.deleteProgram(this.updateProg);
+    this.updateProg = createProgram(gl, VERT_SRC, updateFragSrc(eq.body));
+    this.eq = eq;
+    this.time = 0;
+  }
+
+  setParams(arr) {
+    for (let i = 0; i < 4; i++) this.params[i] = arr[i] || 0;
+  }
+
+  setMouse(x, y, amp) {
+    this.mouse = [x, y, amp];
+  }
+
+  _bindQuad(prog) {
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quad);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  }
+
+  // Advance the simulation by `n` solver steps.
+  step(n) {
+    const gl = this.gl;
+    if (!this.updateProg) return;
+    gl.useProgram(this.updateProg);
+    this._bindQuad(this.updateProg);
+    gl.viewport(0, 0, this.N, this.N);
+
+    const P = this.updateProg;
+    const loc = (name) => gl.getUniformLocation(P, name);
+    gl.uniform2f(loc("u_texel"), 1 / this.N, 1 / this.N);
+    gl.uniform1f(loc("u_dt"), this.eq.dt);
+    gl.uniform1f(loc("u_p0"), this.params[0]);
+    gl.uniform1f(loc("u_p1"), this.params[1]);
+    gl.uniform1f(loc("u_p2"), this.params[2]);
+    gl.uniform1f(loc("u_p3"), this.params[3]);
+    gl.uniform1f(loc("u_brushR"), this.brushR);
+    gl.uniform1i(loc("u_state"), 0);
+    const timeLoc = loc("u_time");
+    const mouseLoc = loc("u_mouse");
+
+    for (let i = 0; i < n; i++) {
+      const dst = 1 - this.src;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos[dst]);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.textures[this.src]);
+      gl.uniform1f(timeLoc, this.time);
+      gl.uniform3f(mouseLoc, this.mouse[0], this.mouse[1], this.mouse[2]);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      this.src = dst;
+      this.time += this.eq.dt;
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  render() {
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.useProgram(this.renderProg);
+    this._bindQuad(this.renderProg);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.textures[this.src]);
+    gl.uniform1i(gl.getUniformLocation(this.renderProg, "u_state"), 0);
+    gl.uniform1f(gl.getUniformLocation(this.renderProg, "u_gain"), this.gain);
+    gl.uniform1i(gl.getUniformLocation(this.renderProg, "u_cmap"), this.cmap);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  // Reset the field. If `seed` is true, drop a Gaussian bump in the centre.
+  reset(seed = false) {
+    const gl = this.gl;
+    const N = this.N;
+    const data = new Float32Array(N * N * 4);
+    if (seed) {
+      const cx = N / 2;
+      const cy = N / 2;
+      const sigma = N * 0.04;
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const r2 = (x - cx) ** 2 + (y - cy) ** 2;
+          data[(y * N + x) * 4] = Math.exp(-r2 / (2 * sigma * sigma));
+        }
+      }
+    }
+    for (let i = 0; i < 2; i++) {
+      gl.bindTexture(gl.TEXTURE_2D, this.textures[i]);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, N, N, gl.RGBA, gl.FLOAT, data);
+    }
+    this.src = 0;
+    this.time = 0;
+  }
+}
+
+
+
+const $ = (id) => document.getElementById(id);
+
+const canvas = $("gl");
+const overlay = $("overlay-msg");
+
+let solver;
+try {
+  solver = new Solver(canvas);
+} catch (err) {
+  overlay.classList.remove("hidden");
+  overlay.innerHTML =
+    "⚠️ 시뮬레이터를 시작할 수 없습니다.<br><br>" +
+    String(err.message || err) +
+    "<br><br>최신 데스크톱 브라우저(Chrome / Edge / Firefox / Safari)에서 열어보세요.";
+  throw err;
+}
+
+let currentEq = EQUATIONS[0];
+let running = true;
+let substeps = 4;
+
+// ---------------------------------------------------------------------------
+// UI: equation selector
+// ---------------------------------------------------------------------------
+const eqSelect = $("equation-select");
+EQUATIONS.forEach((eq) => {
+  const opt = document.createElement("option");
+  opt.value = eq.id;
+  opt.textContent = eq.name;
+  eqSelect.appendChild(opt);
+});
+eqSelect.addEventListener("change", () => selectEquation(eqSelect.value));
+
+function selectEquation(id) {
+  currentEq = getEquation(id);
+  solver.setEquation(currentEq);
+  solver.gain = currentEq.gain;
+  substeps = currentEq.substeps;
+
+  $("equation-desc").textContent = currentEq.desc;
+  $("equation-formula").textContent = currentEq.formula;
+  $("gain").value = currentEq.gain;
+  $("substeps").value = currentEq.substeps;
+  syncOutputs();
+  buildParams();
+  pushParams();
+  solver.reset(true);
+}
+
+// ---------------------------------------------------------------------------
+// UI: per-equation parameter sliders
+// ---------------------------------------------------------------------------
+function buildParams() {
+  const wrap = $("params");
+  wrap.innerHTML = "";
+  currentEq.params.forEach((p, idx) => {
+    const div = document.createElement("div");
+    div.className = "param";
+    div.innerHTML = `
+      <div class="param-head">
+        <span class="name">${p.name}</span>
+        <span class="val" id="pval-${idx}"></span>
+      </div>
+      <input type="range" id="pinput-${idx}" min="${p.min}" max="${p.max}"
+             step="${p.step}" value="${p.value}" />`;
+    wrap.appendChild(div);
+    const input = div.querySelector("input");
+    input.addEventListener("input", () => {
+      $(`pval-${idx}`).textContent = (+input.value).toFixed(3);
+      pushParams();
+    });
+    $(`pval-${idx}`).textContent = (+input.value).toFixed(3);
+  });
+}
+
+function pushParams() {
+  const arr = [0, 0, 0, 0];
+  currentEq.params.forEach((p, idx) => {
+    const input = $(`pinput-${idx}`);
+    arr[idx] = input ? +input.value : p.value;
+  });
+  solver.setParams(arr);
+}
+
+// ---------------------------------------------------------------------------
+// UI: visualization controls
+// ---------------------------------------------------------------------------
+$("cmap-select").addEventListener("change", (e) => {
+  solver.cmap = +e.target.value;
+});
+$("gain").addEventListener("input", (e) => {
+  solver.gain = +e.target.value;
+  syncOutputs();
+});
+$("substeps").addEventListener("input", (e) => {
+  substeps = +e.target.value;
+  syncOutputs();
+});
+$("brush").addEventListener("input", (e) => {
+  solver.brushR = +e.target.value;
+  syncOutputs();
+});
+$("grid-select").addEventListener("change", (e) => {
+  solver.setResolution(+e.target.value);
+  solver.reset(true);
+});
+
+function syncOutputs() {
+  $("gain-val").textContent = (+$("gain").value).toFixed(2);
+  $("substeps-val").textContent = $("substeps").value;
+  $("brush-val").textContent = (+$("brush").value).toFixed(3);
+}
+
+// ---------------------------------------------------------------------------
+// UI: buttons
+// ---------------------------------------------------------------------------
+$("btn-play").addEventListener("click", () => {
+  running = !running;
+  $("btn-play").textContent = running ? "⏸ 일시정지" : "▶ 재생";
+});
+$("btn-drop").addEventListener("click", () => solver.reset(true));
+$("btn-clear").addEventListener("click", () => solver.reset(false));
+
+// ---------------------------------------------------------------------------
+// Pointer interaction → brush
+// ---------------------------------------------------------------------------
+let pointerDown = false;
+
+function pointerToUV(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = 1.0 - (e.clientY - rect.top) / rect.height; // flip Y
+  return [Math.min(Math.max(x, 0), 1), Math.min(Math.max(y, 0), 1)];
+}
+
+function applyBrush(e) {
+  const [x, y] = pointerToUV(e);
+  solver.setMouse(x, y, currentEq.brushAmp);
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  pointerDown = true;
+  canvas.setPointerCapture(e.pointerId);
+  applyBrush(e);
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (pointerDown) applyBrush(e);
+});
+function endPointer() {
+  pointerDown = false;
+  solver.setMouse(0, 0, 0);
+}
+canvas.addEventListener("pointerup", endPointer);
+canvas.addEventListener("pointercancel", endPointer);
+canvas.addEventListener("pointerleave", () => {
+  if (!pointerDown) solver.setMouse(0, 0, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Canvas sizing — keep it square and crisp.
+// ---------------------------------------------------------------------------
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  const size = Math.max(64, Math.min(wrap.clientWidth, wrap.clientHeight));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.style.width = size + "px";
+  canvas.style.height = size + "px";
+  canvas.width = Math.round(size * dpr);
+  canvas.height = Math.round(size * dpr);
+}
+window.addEventListener("resize", resizeCanvas);
+
+// ---------------------------------------------------------------------------
+// Main loop
+// ---------------------------------------------------------------------------
+let frames = 0;
+let lastFpsT = performance.now();
+
+function frame() {
+  if (running) solver.step(substeps);
+  solver.render();
+
+  // FPS counter.
+  frames++;
+  const now = performance.now();
+  if (now - lastFpsT > 500) {
+    const fps = Math.round((frames * 1000) / (now - lastFpsT));
+    $("status").textContent = `${solver.N}² 격자 · ${fps} FPS`;
+    frames = 0;
+    lastFpsT = now;
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+resizeCanvas();
+selectEquation(EQUATIONS[0].id);
+syncOutputs();
+requestAnimationFrame(frame);
+
+</script>
+</body>
+</html>
