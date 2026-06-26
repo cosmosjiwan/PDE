@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1117" />
   <title>PDE Playground — 실시간 편미분방정식 시각화</title>
   <style>
 :root {
@@ -17,6 +18,8 @@
 }
 
 * { box-sizing: border-box; }
+
+html { color-scheme: dark; }
 
 html, body {
   margin: 0;
@@ -145,8 +148,17 @@ input[type="range"] {
   height: 4px;
   background: var(--border);
   border-radius: 4px;
-  outline: none;
 }
+
+/* Visible focus for keyboard users (replaces the removed default outline). */
+button:focus-visible,
+select:focus-visible,
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb { background: var(--text); }
+input[type="range"]:focus-visible::-moz-range-thumb { background: var(--text); }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -173,6 +185,8 @@ input[type="range"]::-moz-range-thumb {
   padding: 9px 6px;
   font-size: 13px;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: border-color .15s, background .15s;
 }
 .buttons button:hover { border-color: var(--accent); }
@@ -229,6 +243,14 @@ footer { margin-top: auto; }
   #canvas-wrap { height: 55%; }
 }
 
+/* Respect users who prefer reduced motion: drop UI transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -240,8 +262,8 @@ footer { margin-top: auto; }
       </header>
 
       <section class="panel">
-        <label class="field-label">방정식</label>
-        <select id="equation-select"></select>
+        <label class="field-label" for="equation-select">방정식</label>
+        <select id="equation-select" aria-label="방정식 선택"></select>
         <p id="equation-desc" class="desc"></p>
         <div id="equation-formula" class="formula"></div>
       </section>
@@ -255,7 +277,7 @@ footer { margin-top: auto; }
         <label class="field-label">시각화</label>
         <div class="control-row">
           <span>컬러맵</span>
-          <select id="cmap-select">
+          <select id="cmap-select" aria-label="컬러맵 선택">
             <option value="0">Coolwarm</option>
             <option value="1">Fire</option>
             <option value="2">Spectral</option>
@@ -265,12 +287,12 @@ footer { margin-top: auto; }
         </div>
         <div class="control-row slider">
           <span>대비 (gain)</span>
-          <input type="range" id="gain" min="0.1" max="6" step="0.05" value="1.4" />
+          <input type="range" id="gain" min="0.1" max="6" step="0.05" value="1.4" aria-label="대비 (gain)" />
           <output id="gain-val"></output>
         </div>
         <div class="control-row">
           <span>해상도</span>
-          <select id="grid-select">
+          <select id="grid-select" aria-label="격자 해상도">
             <option value="128">128 × 128</option>
             <option value="256" selected>256 × 256</option>
             <option value="512">512 × 512</option>
@@ -278,12 +300,12 @@ footer { margin-top: auto; }
         </div>
         <div class="control-row slider">
           <span>속도 (steps/frame)</span>
-          <input type="range" id="substeps" min="1" max="20" step="1" value="4" />
+          <input type="range" id="substeps" min="1" max="20" step="1" value="4" aria-label="시뮬레이션 속도 (프레임당 스텝)" />
           <output id="substeps-val"></output>
         </div>
         <div class="control-row slider">
           <span>붓 크기</span>
-          <input type="range" id="brush" min="0.005" max="0.12" step="0.005" value="0.03" />
+          <input type="range" id="brush" min="0.005" max="0.12" step="0.005" value="0.03" aria-label="붓 크기" />
           <output id="brush-val"></output>
         </div>
       </section>
@@ -301,7 +323,7 @@ footer { margin-top: auto; }
     </aside>
 
     <main id="canvas-wrap">
-      <canvas id="gl"></canvas>
+      <canvas id="gl" role="img" aria-label="편미분방정식 시뮬레이션 화면. 클릭 또는 드래그하여 교란을 줍니다."></canvas>
       <div id="overlay-msg" class="overlay-msg hidden"></div>
     </main>
   </div>
@@ -787,7 +809,7 @@ function buildParams() {
         <span class="val" id="pval-${idx}"></span>
       </div>
       <input type="range" id="pinput-${idx}" min="${p.min}" max="${p.max}"
-             step="${p.step}" value="${p.value}" />`;
+             step="${p.step}" value="${p.value}" aria-label="${p.name}" />`;
     wrap.appendChild(div);
     const input = div.querySelector("input");
     input.addEventListener("input", () => {

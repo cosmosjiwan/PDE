@@ -65,7 +65,7 @@ function buildParams() {
         <span class="val" id="pval-${idx}"></span>
       </div>
       <input type="range" id="pinput-${idx}" min="${p.min}" max="${p.max}"
-             step="${p.step}" value="${p.value}" />`;
+             step="${p.step}" value="${p.value}" aria-label="${p.name}" />`;
     wrap.appendChild(div);
     const input = div.querySelector("input");
     input.addEventListener("input", () => {
