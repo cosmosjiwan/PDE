@@ -42,6 +42,10 @@ python3 -m http.server 8000
 node build.mjs   # → pde-playground.html 재생성
 ```
 
+> 캐시버스팅: `index.html`은 `css/style.css?v=...`, `js/main.js?v=...`(+ `main.js`
+> 내부 import의 `?v=...`)로 정적 파일 버전을 관리합니다. CSS/JS를 수정해 배포할
+> 때는 이 `?v=` 값을 함께 올리면 브라우저가 새 파일을 즉시 받아갑니다.
+
 ## 사용법
 
 - **방정식 선택** — 좌측 상단 드롭다운

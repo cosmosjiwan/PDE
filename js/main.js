@@ -1,5 +1,5 @@
-import { EQUATIONS, getEquation } from "./equations.js";
-import { Solver } from "./solver.js";
+import { EQUATIONS, getEquation } from "./equations.js?v=20260626";
+import { Solver } from "./solver.js?v=20260626";
 
 const $ = (id) => document.getElementById(id);
 

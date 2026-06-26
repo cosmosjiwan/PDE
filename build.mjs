@@ -19,12 +19,13 @@ const solver = rd("js/solver.js").replace(/^export class/m, "class");
 const main = rd("js/main.js").replace(/^import[^\n]*\n/gm, ""); // drop import lines
 
 const html = rd("index.html")
+  // tolerate an optional ?v=... cache-busting query on the asset URLs
   .replace(
-    /<link rel="stylesheet" href="css\/style.css" \/>/,
+    /<link rel="stylesheet" href="css\/style.css[^"]*" \/>/,
     `<style>\n${css}\n</style>`
   )
   .replace(
-    /<script type="module" src="js\/main.js"><\/script>/,
+    /<script type="module" src="js\/main.js[^"]*"><\/script>/,
     `<script>\n${eq}\n\n${solver}\n\n${main}\n</script>`
   );
 
