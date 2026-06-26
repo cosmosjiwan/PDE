@@ -47,7 +47,7 @@ function selectEquation(id) {
   syncOutputs();
   buildParams();
   pushParams();
-  solver.reset(true);
+  solver.reset(false);
 }
 
 // ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ $("brush").addEventListener("input", (e) => {
 });
 $("grid-select").addEventListener("change", (e) => {
   solver.setResolution(+e.target.value);
-  solver.reset(true);
+  solver.reset(false);
 });
 
 function syncOutputs() {
@@ -121,7 +121,6 @@ $("btn-play").addEventListener("click", () => {
   running = !running;
   $("btn-play").textContent = running ? "⏸ 일시정지" : "▶ 재생";
 });
-$("btn-drop").addEventListener("click", () => solver.reset(true));
 $("btn-clear").addEventListener("click", () => solver.reset(false));
 
 // ---------------------------------------------------------------------------

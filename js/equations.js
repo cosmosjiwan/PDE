@@ -61,35 +61,6 @@ export const EQUATIONS = [
   },
 
   {
-    id: "inhomwave",
-    name: "비균질 파동 (Inhomogeneous Wave)",
-    formula: "∂²u/∂t² = c²(x) ∇²u + f(x,t)",
-    desc:
-      "매질의 파동속도가 공간에 따라 변하고(왼쪽 느림 → 오른쪽 빠름), 왼쪽에 " +
-      "진동하는 강제항 f 가 파동을 계속 만들어냅니다. 굴절·산란을 관찰하세요.",
-    dt: 0.3,
-    substeps: 4,
-    gain: 1.8,
-    brushAmp: 0.8,
-    params: [
-      { key: "p0", name: "속도 스케일", min: 0.2, max: 2.0, step: 0.05, value: 1.0 },
-      { key: "p1", name: "감쇠 γ", min: 0.0, max: 0.03, step: 0.001, value: 0.004 },
-      { key: "p2", name: "강제항 진폭", min: 0.0, max: 1.5, step: 0.05, value: 0.7 },
-      { key: "p3", name: "강제항 주파수", min: 0.0, max: 1.0, step: 0.01, value: 0.28 },
-    ],
-    body: /* glsl */ `
-      // Spatially varying wave speed: smooth gradient across x.
-      float c2 = u_p0 * (0.3 + 1.1 * v_uv.x);
-      float damp = u_p1;
-      // Oscillating point source on the left.
-      vec2 ds = v_uv - vec2(0.18, 0.5);
-      float src = u_p2 * sin(u_p3 * u_time) * exp(-dot(ds, ds) / 0.0009);
-      newV = v + u_dt * (c2 * lap - damp * v + src);
-      newU = u + u_dt * newV;
-    `,
-  },
-
-  {
     id: "plate",
     name: "판 방정식 (Plate / Biharmonic)",
     formula: "∂²u/∂t² = −D ∇⁴u − γ ∂u/∂t",
